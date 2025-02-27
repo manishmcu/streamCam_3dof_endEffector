@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serial Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #serial-output {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        .row {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Serial Server</h1>
+
+    <!-- Motor Control Inputs -->
+    <div class="row">
+        <input type="number" id="motorXY-input" placeholder="Motor XY value">
+        <button onclick="sendMotorCommand('motor_xy', 'right')">Rotate Motor XY Right (+)</button>
+        <button onclick="sendMotorCommand('motor_xy', 'left')">Rotate Motor XY Left (-)</button>
+    </div>
+    
+    <div class="row">
+        <input type="number" id="motorZ-input" placeholder="Motor Z value">
+        <button onclick="sendMotorCommand('motor_z', 'down')">Rotate Motor Z Down (+)</button>
+        <button onclick="sendMotorCommand('motor_z', 'up')">Rotate Motor Z Up (-)</button>
+    </div>
+
+    <h2>Serial Monitor</h2>
+    <div id="serial-output"></div>
+
+    <script>
+        async function fetchSerialData() {
+            const response = await fetch('/get_serial_data');
+            const data = await response.json();
+            document.getElementById('serial-output').innerText = data.join('\n');
+        }
+
+        async function sendMotorCommand(motor, direction) {
+            const motorXYValue = document.getElementById('motorXY-input').value;
+            const motorZValue = document.getElementById('motorZ-input').value;
+
+            let command = '';
+            if (motor === 'motor_xy') {
+                const value = direction === 'left' ? motorXYValue : -motorXYValue;
+                command = `motor_xy,${value}`;
+            } else if (motor === 'motor_z') {
+                const value = direction === 'down' ? motorZValue : -motorZValue; 
+                command = `motor_z,${value}`;
+            }
+
+            if (command) {
+                const response = await fetch('/send_serial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: command })
+                });
+                const result = await response.json();
+                alert(result.message);
+                document.getElementById('motorXY-input').value = '';
+                document.getElementById('motorZ-input').value = '';
+            } else {
+                alert("Please enter a value.");
+            }
+        }
+
+        setInterval(fetchSerialData, 1000); // Refresh serial data every second
+    </script>
+</body>
+</html>
